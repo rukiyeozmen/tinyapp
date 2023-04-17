@@ -1,6 +1,9 @@
+// Once the Express instance is created, developers can use it to listen for incoming HTTP requests on a specified port and respond with the appropriate content or data. For example, app.listen(3000, () => console.log("Server running on port 3000")); will start the server on port 3000 and log a message to the console when it's ready to receive requests.
 const express = require("express");
+const app = express(); //creates an instance of the Express framework
 const PORT = 8080;
-const app = express();
+
+app.set('view engine', 'ejs');
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
