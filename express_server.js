@@ -19,8 +19,20 @@ app.post("/urls", (req, res) => {
   console.log(urlDatabase);
   res.redirect(`/urls/${shortURL}`);
 });
+
 app.post('/urls/:id/delete', (req, res) => {
   delete urlDatabase[req.params.id];
+  res.redirect('/urls');
+});
+
+//for updating
+app.post('/urls/:id', (req, res) => {
+  const shortURL = req.params.id;
+  const longURL = req.body.longURL;
+  console.log("short: ", shortURL);
+  console.log("long: ", longURL);
+  urlDatabase[shortURL] = longURL;
+  console.log(urlDatabase);
   res.redirect('/urls');
 });
 
