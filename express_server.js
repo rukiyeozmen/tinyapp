@@ -13,8 +13,15 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const shortURL = generateRandomString();
+  const longURL = req.body.longURL;
+  urlDatabase[shortURL] = longURL;
+  console.log(urlDatabase);
+  res.redirect(`/urls/${shortURL}`);
+});
+app.get('/u/:id', (req, res) => {
+  const longURL = urlDatabase[req.params.id];
+  res.redirect(longURL);
 });
 
 app.get('/urls', (req, res) => {
@@ -49,7 +56,14 @@ app.get('/urls/:id', (req, res) => {
 });
 
 
-function generateRandomString() {}
+function generateRandomString() {
+  let str = '';
+  const CHAR_SET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 6; i++) {
+    str += CHAR_SET.charAt(Math.floor(Math.random() * CHAR_SET.length));
+  }
+  return str;
+}
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
