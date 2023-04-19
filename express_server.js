@@ -1,7 +1,9 @@
 // Once the Express instance is created, developers can use it to listen for incoming HTTP requests on a specified port and respond with the appropriate content or data. For example, app.listen(3000, () => console.log("Server running on port 3000")); will start the server on port 3000 and log a message to the console when it's ready to receive requests.
 const express = require("express");
+const cookieParser = require('cookie-parser');
 const app = express(); //creates an instance of the Express framework
 const PORT = 8080;
+const bodyParser = require('body-parser');
 
 app.set('view engine', 'ejs');
 
@@ -9,7 +11,10 @@ const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 
 app.post("/urls", (req, res) => {
@@ -33,6 +38,14 @@ app.post('/urls/:id', (req, res) => {
   console.log("long: ", longURL);
   urlDatabase[shortURL] = longURL;
   console.log(urlDatabase);
+  res.redirect('/urls');
+});
+
+//*  login
+app.post('/login', (req, res) => {
+  console.log(req.body);
+  const username = req.body.username;
+  res.cookie('username', username);
   res.redirect('/urls');
 });
 
