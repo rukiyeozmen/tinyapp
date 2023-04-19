@@ -29,6 +29,10 @@ app.post('/urls/:id/delete', (req, res) => {
   delete urlDatabase[req.params.id];
   res.redirect('/urls');
 });
+app.post('/logout', function(req, res) {
+  res.clearCookie('username');
+  res.redirect('/urls');
+});
 
 //for updating
 app.post('/urls/:id', (req, res) => {
@@ -56,6 +60,7 @@ app.get('/u/:id', (req, res) => {
 
 app.get('/urls', (req, res) => {
   const templateVars = {
+    username: req.cookies["username"],
     urls: urlDatabase
   };
   res.render('urls_index', templateVars);
@@ -74,13 +79,17 @@ app.get('/hello', (req, res) => {
 });
 
 app.get('/urls/new', (req, res) => {
-  res.render('urls_new');
+  const templateVars = {
+    username: req.cookies["username"]
+  };
+  res.render('urls_new', templateVars);
 });
 
 app.get('/urls/:id', (req, res) => {
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id]
+    longURL: urlDatabase[req.params.id],
+    username: req.cookies["username"]
   };
   res.render('urls_show', templateVars);
 });
