@@ -12,6 +12,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+const users = {
+  a: {
+    id: "a",
+    email: "a@gmail.com",
+    password: "1234",
+  },
+  b: {
+    id: "b",
+    email: "b@gmail.com",
+    password: "5678"
+  },
+};
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -29,6 +42,7 @@ app.post('/urls/:id/delete', (req, res) => {
   delete urlDatabase[req.params.id];
   res.redirect('/urls');
 });
+
 app.post('/logout', function(req, res) {
   res.clearCookie('username');
   res.redirect('/urls');
@@ -53,14 +67,36 @@ app.post('/login', (req, res) => {
   res.redirect('/urls');
 });
 
+app.post('/register', (req, res) => {
+  const id = generateRandomString();
+  const email = req.body.email;
+  const password = req.body.password;
+  if (!email || !password) {
+    res.status(400).send('Email or Password does not exist!');
+  } else if (Object.values(users).find((user) => user.email === email)) {
+    res.status(400).send('Email already registered');
+  } else {
+    users[id] = { id, email, password };
+    res.cookie('user_id', id);
+    res.redirect('/urls');
+  }
+});
+
+//*Register
+app.get('/register', (req, res) => {
+  res.render('urls_register');
+});
+
 app.get('/u/:id', (req, res) => {
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
 });
 
 app.get('/urls', (req, res) => {
+  const user_id = req.cookies.user_id;
+  const user = users[user_id];
   const templateVars = {
-    username: req.cookies["username"],
+    user: user,
     urls: urlDatabase
   };
   res.render('urls_index', templateVars);
@@ -79,17 +115,21 @@ app.get('/hello', (req, res) => {
 });
 
 app.get('/urls/new', (req, res) => {
+  const user_id = req.cookies.user_id;
+  const user = users[user_id];
   const templateVars = {
-    username: req.cookies["username"]
+    user: user
   };
   res.render('urls_new', templateVars);
 });
 
 app.get('/urls/:id', (req, res) => {
+  const user_id = req.cookies.user_id;
+  const user = users[user_id];
   const templateVars = {
     id: req.params.id,
     longURL: urlDatabase[req.params.id],
-    username: req.cookies["username"]
+    user: user
   };
   res.render('urls_show', templateVars);
 });

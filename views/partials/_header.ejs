@@ -21,16 +21,12 @@
           <button type="submit">Log in</button>
         </form> -->
        
-        <% if (username) { %>
-          <li>Logged in as:  <%= username %>!</li>
+        <% if (user) { %>
+          <li>Logged in as:  <%= user.email %>!</li>
           <li><form method="post" action="/logout"><a href="/urls"><button type="submit">Logout</button></a></form></li>
         <% } else { %>
-          <li>
-            <form method="post" action="/login">
-              <input type="text" name="username" placeholder="Username">
-              <button type="submit">Login</button>
-            </form>
-          </li>
+          <a href="/register">Register</a>
+          <a href="/login">Login</a>
         <% } %>
       </div>
     
