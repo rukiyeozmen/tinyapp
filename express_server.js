@@ -7,9 +7,19 @@ const bodyParser = require('body-parser');
 
 app.set('view engine', 'ejs');
 
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
 
 const users = {
@@ -31,8 +41,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 
 app.post("/urls", (req, res) => {
+  const user = users[req.cookies.user_id];
+  if (!user) {
+    res.status(401).send('You must be logged in!');
+    return;
+  }
   const shortURL = generateRandomString();
-  const longURL = req.body.longURL;
+  const longURL = urlDatabase[req.params.id].longURL;
   urlDatabase[shortURL] = longURL;
   console.log(urlDatabase);
   res.redirect(`/urls/${shortURL}`);
@@ -51,7 +66,7 @@ app.post('/logout', function(req, res) {
 //for updating
 app.post('/urls/:id', (req, res) => {
   const shortURL = req.params.id;
-  const longURL = req.body.longURL;
+  const longURL = urlDatabase[id].longURL;
   console.log("short: ", shortURL);
   console.log("long: ", longURL);
   urlDatabase[shortURL] = longURL;
@@ -97,30 +112,47 @@ app.post('/register', (req, res) => {
   }
 });
 
-app.get('/login', (req, res) => {
-
+app.get("/login", (req, res) => {
+  if (req.cookies['user_id']) {
+    res.redirect('/urls');
+  }
   res.render('urls_login');
 });
 
 //*Register
 app.get('/register', (req, res) => {
+  if (req.cookies['user_id']) {
+    res.redirect('/urls');
+  }
   res.render('urls_register');
 });
 
 app.get('/u/:id', (req, res) => {
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
   res.redirect(longURL);
 });
 
 app.get('/urls', (req, res) => {
   const user_id = req.cookies.user_id;
   const user = users[user_id];
-  const templateVars = {
-    user: user,
-    urls: urlDatabase
-  };
-  res.render('urls_index', templateVars);
+  if (!user) {
+    return res.status(401).send("Please log in or register first.");
+  }
+  else {
+    const userUrls = urlsForUser(user.id, urlDatabase);
+    res.render('urls_index', { urls: userUrls });
+  }
 });
+
+const urlsForUser = function(id, urlDatabase) {
+  const userUrls = {};
+  for (const shortURL in urlDatabase) {
+    if (urlDatabase[shortURL].userID === id) {
+      userUrls[shortURL] = urlDatabase[shortURL];
+    }
+  }
+  return userUrls;
+};
 
 app.get('/', (req, res) => {
   res.send("Hello!");
@@ -140,6 +172,10 @@ app.get('/urls/new', (req, res) => {
   const templateVars = {
     user: user
   };
+  if (!user) {
+    res.redirect('/login');
+    return;
+  }
   res.render('urls_new', templateVars);
 });
 
@@ -148,9 +184,12 @@ app.get('/urls/:id', (req, res) => {
   const user = users[user_id];
   const templateVars = {
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,
     user: user
   };
+  if (!req.params.id) {
+    res.status(404).send('<h1>404 Not Found</h1><p>The shortened URL you requested does not exist.</p>');
+  }
   res.render('urls_show', templateVars);
 });
 
