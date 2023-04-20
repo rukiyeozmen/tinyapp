@@ -44,8 +44,8 @@ app.post('/urls/:id/delete', (req, res) => {
 });
 
 app.post('/logout', function(req, res) {
-  res.clearCookie('username');
-  res.redirect('/urls');
+  res.clearCookie('user_id');
+  res.redirect('/login');
 });
 
 //for updating
@@ -61,11 +61,26 @@ app.post('/urls/:id', (req, res) => {
 
 //*  login
 app.post('/login', (req, res) => {
-  console.log(req.body);
-  const username = req.body.username;
-  res.cookie('username', username);
-  res.redirect('/urls');
+  const email = req.body.email;
+  const password = req.body.password;
+  const user = getUserByEmail(email, users);
+  console.log("USER: ", user);
+  if (!user || user.password !== password) {
+    res.status(403).send('Invalid email or password');
+  } else {
+    res.cookie('user_id', user.id);
+    res.redirect('/urls');
+  }
 });
+
+function getUserByEmail(email, users) {
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      return users[userId];
+    }
+  }
+  return null;
+}
 
 app.post('/register', (req, res) => {
   const id = generateRandomString();
@@ -80,6 +95,11 @@ app.post('/register', (req, res) => {
     res.cookie('user_id', id);
     res.redirect('/urls');
   }
+});
+
+app.get('/login', (req, res) => {
+
+  res.render('urls_login');
 });
 
 //*Register
