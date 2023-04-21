@@ -1,10 +1,11 @@
 // Once the Express instance is created, developers can use it to listen for incoming HTTP requests on a specified port and respond with the appropriate content or data. For example, app.listen(3000, () => console.log("Server running on port 3000")); will start the server on port 3000 and log a message to the console when it's ready to receive requests.
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const app = express(); //creates an instance of the Express framework
 const PORT = 8080;
 const bodyParser = require('body-parser');
 const bcrypt = require("bcryptjs");
+const { getUserByEmail } = require('./helper');
 
 app.set('view engine', 'ejs');
 
@@ -24,22 +25,29 @@ const users = {
   a: {
     id: "a",
     email: "a@gmail.com",
-    password: "1234",
+    password: bcrypt.hashSync('1234', 10)
   },
   b: {
     id: "b",
     email: "b@gmail.com",
-    password: "5678"
+    password: bcrypt.hashSync('5678', 10)
   },
 };
 
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(cookieSession({
+  name: 'my-cookie',
+  keys: ['whatever']
+}));
 
 
 app.post("/urls", (req, res) => {
-  const user = users[req.cookies.user_id];
+  const user = users[req.session.user_id];
+  console.log("#######  USER   #####", user);
+  console.log("%%%%%% REQ. SESSION: %%%%", req.session);
+
   if (!user) {
     res.status(401).send('You must be logged in!');
     return;
@@ -60,17 +68,17 @@ app.post('/urls/:id/delete', (req, res) => {
 });
 
 app.post('/logout', function(req, res) {
-  res.clearCookie('user_id');
+  req.session.user_id = null;
   res.redirect('/login');
 });
 
-//for updating
+//for updating(edit)
 app.post('/urls/:id', (req, res) => {
   const shortURL = req.params.id;
-  const longURL = urlDatabase[id].longURL;
+  const longURL = req.body.longURL;
   console.log("short: ", shortURL);
   console.log("long: ", longURL);
-  urlDatabase[shortURL] = longURL;
+  urlDatabase[shortURL] = { longURL, userID: req.session.user_id };
   console.log(urlDatabase);
   res.redirect('/urls');
 });
@@ -82,21 +90,13 @@ app.post('/login', (req, res) => {
   const user = getUserByEmail(email, users);
   console.log("USER: ", user);
   if (user && bcrypt.compareSync(password, user.password)) {
-    res.cookie('user_id', user.id);
+    req.session.user_id = user.id;
     res.redirect('/urls');
   } else {
     res.status(403).send('Invalid email or password');
   }
 });
 
-function getUserByEmail(email, users) {
-  for (const userId in users) {
-    if (users[userId].email === email) {
-      return users[userId];
-    }
-  }
-  return null;
-}
 
 app.post('/register', (req, res) => {
   const email = req.body.email;
@@ -110,13 +110,14 @@ app.post('/register', (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
     users[id] = { id, email, password: hashedPassword };
     console.log("USER[id]-----", users[id]);
-    res.cookie('user_id', id);
+    //res.cookie('user_id', id);
+    req.session.user_id = id;
     res.redirect('/urls');
   }
 });
 
 app.get("/login", (req, res) => {
-  if (req.cookies['user_id']) {
+  if (req.session.user_id) {
     res.redirect('/urls');
   }
   res.render('urls_login');
@@ -124,7 +125,7 @@ app.get("/login", (req, res) => {
 
 //*Register
 app.get('/register', (req, res) => {
-  if (req.cookies['user_id']) {
+  if (req.session.user_id) {
     res.redirect('/urls');
   }
   res.render('urls_register');
@@ -136,7 +137,7 @@ app.get('/u/:id', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  const user_id = req.cookies.user_id;
+  const user_id = req.session.user_id;
   const user = users[user_id];
   if (!user) {
     return res.status(401).send("Please log in or register first.");
@@ -170,7 +171,7 @@ app.get('/hello', (req, res) => {
 });
 
 app.get('/urls/new', (req, res) => {
-  const user_id = req.cookies.user_id;
+  const user_id = req.session.user_id;
   const user = users[user_id];
   const templateVars = {
     user: user
@@ -183,7 +184,7 @@ app.get('/urls/new', (req, res) => {
 });
 
 app.get('/urls/:id', (req, res) => {
-  const user_id = req.cookies.user_id;
+  const user_id = req.session.user_id;
   const user = users[user_id];
   const templateVars = {
     id: req.params.id,
