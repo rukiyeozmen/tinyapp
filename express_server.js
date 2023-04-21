@@ -4,13 +4,11 @@ const cookieParser = require('cookie-parser');
 const app = express(); //creates an instance of the Express framework
 const PORT = 8080;
 const bodyParser = require('body-parser');
+const bcrypt = require("bcryptjs");
 
 app.set('view engine', 'ejs');
 
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
+
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -47,8 +45,11 @@ app.post("/urls", (req, res) => {
     return;
   }
   const shortURL = generateRandomString();
-  const longURL = urlDatabase[req.params.id].longURL;
-  urlDatabase[shortURL] = longURL;
+  const longURL = req.body.longURL;
+  urlDatabase[shortURL] = {
+    longURL,
+    userID: user.id
+  };
   console.log(urlDatabase);
   res.redirect(`/urls/${shortURL}`);
 });
@@ -80,11 +81,11 @@ app.post('/login', (req, res) => {
   const password = req.body.password;
   const user = getUserByEmail(email, users);
   console.log("USER: ", user);
-  if (!user || user.password !== password) {
-    res.status(403).send('Invalid email or password');
-  } else {
+  if (user && bcrypt.compareSync(password, user.password)) {
     res.cookie('user_id', user.id);
     res.redirect('/urls');
+  } else {
+    res.status(403).send('Invalid email or password');
   }
 });
 
@@ -98,7 +99,6 @@ function getUserByEmail(email, users) {
 }
 
 app.post('/register', (req, res) => {
-  const id = generateRandomString();
   const email = req.body.email;
   const password = req.body.password;
   if (!email || !password) {
@@ -106,7 +106,10 @@ app.post('/register', (req, res) => {
   } else if (Object.values(users).find((user) => user.email === email)) {
     res.status(400).send('Email already registered');
   } else {
-    users[id] = { id, email, password };
+    const id = generateRandomString();
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    users[id] = { id, email, password: hashedPassword };
+    console.log("USER[id]-----", users[id]);
     res.cookie('user_id', id);
     res.redirect('/urls');
   }
@@ -140,7 +143,7 @@ app.get('/urls', (req, res) => {
   }
   else {
     const userUrls = urlsForUser(user.id, urlDatabase);
-    res.render('urls_index', { urls: userUrls });
+    res.render('urls_index', { user: user, urls: userUrls });
   }
 });
 
