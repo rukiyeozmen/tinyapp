@@ -4,7 +4,7 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require('body-parser');
 const bcrypt = require("bcryptjs");
-const { getUserByEmail } = require('./helper');
+const { getUserByEmail, generateRandomString, urlsForUser } = require('./helper');
 
 app.set('view engine', 'ejs');
 
@@ -41,28 +41,17 @@ app.use(cookieSession({
   keys: ['whatever']
 }));
 
-// Helper functions
-const urlsForUser = function(id, urlDatabase) {
-  const userUrls = {};
-  for (const shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === id) {
-      userUrls[shortURL] = urlDatabase[shortURL];
-    }
-  }
-  return userUrls;
-};
-
-// Generates random string (shorturl)
-function generateRandomString() {
-  let str = '';
-  const CHAR_SET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 6; i++) {
-    str += CHAR_SET.charAt(Math.floor(Math.random() * CHAR_SET.length));
-  }
-  return str;
-}
 
 // Routes
+app.get('/', (req, res) => {
+  const user_id = req.session.user_id;
+  const user = users[user_id];
+  if (!user) {
+    return res.redirect('/login');
+  }
+  return res.redirect('/urls');
+});
+
 //* Get post request for url index
 app.get('/urls', (req, res) => {
   const user_id = req.session.user_id;
@@ -109,24 +98,25 @@ app.get('/urls/new', (req, res) => {
 app.get('/urls/:id', (req, res) => {
   const user_id = req.session.user_id;
   const user = users[user_id];
+
+  if (!urlDatabase[req.params.id]) {
+    return res.status(404).send('<h1>404 Not Found</h1><p>The shortened URL you requested does not exist.</p>');
+  }
+  if (urlDatabase[req.params.id].userID !== user_id) {
+    return res.status(403).send('<h1>403 Forbidden</h1><p>The shortened URL you requested does not not belong to you.</p>');
+  }
   const templateVars = {
     id: req.params.id,
     longURL: urlDatabase[req.params.id].longURL,
     user: user
   };
-  if (!urlDatabase[req.params.id]) {
-    res.status(404).send('<h1>404 Not Found</h1><p>The shortened URL you requested does not exist.</p>');
-  }
   res.render('urls_show', templateVars);
 });
 
 app.post('/urls/:id', (req, res) => {
   const shortURL = req.params.id;
   const longURL = req.body.longURL;
-  console.log("short: ", shortURL);
-  console.log("long: ", longURL);
   urlDatabase[shortURL] = { longURL, userID: req.session.user_id };
-  console.log(urlDatabase);
   res.redirect('/urls');
 });
 
@@ -158,7 +148,6 @@ app.post('/register', (req, res) => {
     const id = generateRandomString();
     const hashedPassword = bcrypt.hashSync(password, 10);
     users[id] = { id, email, password: hashedPassword };
-    console.log("USER[id]-----", users[id]);
     req.session.user_id = id;
     res.redirect('/urls');
   }
@@ -179,7 +168,6 @@ app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUserByEmail(email, users);
-  console.log("USER: ", user);
   if (user && bcrypt.compareSync(password, user.password)) {
     req.session.user_id = user.id;
     res.redirect('/urls');
